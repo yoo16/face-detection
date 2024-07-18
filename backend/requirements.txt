@@ -1,0 +1,6 @@
+Flask
+python-dotenv
+opencv-python==4.9.0.80
+opencv-python-headless
+numpy<2
+flask_cors
