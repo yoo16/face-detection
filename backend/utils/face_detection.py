@@ -11,9 +11,12 @@ def get_initial_result():
         "user_id": 0,
         "error": "",
         "message": "",
+        "image": None,
     }
 
 def detect_faces(image_data):
+    result = get_initial_result()
+
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
@@ -24,23 +27,23 @@ def detect_faces(image_data):
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     if face_cascade.empty():
-        print("Failed to load cascade classifier")
-        return None
+        result['error'] = "Failed to load cascade classifier"
+        return result
 
     faces = face_cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
     if len(faces) == 0:
-        print("No faces detected")
-        return None
+        result['error'] = "No faces detected"
+        return result
 
     # face frame
     # for (x, y, w, h) in faces:
     #     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-
-    return img
+    result['image'] = img
+    return result
 
 def register_face(user_id, image_data, timestamp):
-    result = get_initial_result()  # 新しい result を作成
+    result = get_initial_result()
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 

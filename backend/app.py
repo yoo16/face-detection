@@ -19,37 +19,36 @@ def index():
     return jsonify({'message': "hello flask"})
 
 
-@app.route('/detect', methods=['POST'])
+@app.route('/api/face/detect', methods=['POST'])
 def detect():
     if 'image' not in request.files:
-        return jsonify({'error': 'No image part in the request'}), 400
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No image selected for uploading'}), 400
-    img = file.read()
+        result['error'] = 'No image selected for uploading'
+    else:
+        file = request.files['image']
+        img = file.read()
+        result = detect_faces(img)
 
-    print("Received image for detection")
+    if result['error']:
+        return jsonify(result)
 
-    result_img = detect_faces(img)
-
-    if result_img is None:
-        return jsonify({'error': 'No faces detected'}), 400
-
-    _, buffer = cv2.imencode('.jpg', result_img)
-    encoded_img = base64.b64encode(buffer).decode('utf-8')
-    return jsonify({'image': encoded_img})
+    _, buffer = cv2.imencode('.jpg', result['image'])
+    result['image'] = base64.b64encode(buffer).decode('utf-8')
+    return jsonify(result)
 
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/face/regist', methods=['POST'])
 def register():
     if 'user_id' not in request.form:
         return jsonify({'error': 'No user_id part in the request'}), 400
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image part in the request'}), 400
+
     user_id = request.form['user_id']
     file = request.files['image']
     if file.filename == '':
         return jsonify({'error': 'No image selected for uploading'}), 400
+
     img = file.read()
 
     print(f"Received image for user ID: {user_id}")
@@ -62,7 +61,7 @@ def register():
         return jsonify({'status': 'failure'})
 
 
-@app.route('/recognize', methods=['POST'])
+@app.route('/api/face/recognize', methods=['POST'])
 def recognize():
     if 'image' not in request.files:
         return jsonify({'error': 'No image part in the request'}), 400
@@ -86,5 +85,8 @@ if __name__ == '__main__':
 
     HOST = app.config['HOST']
     PORT = app.config['PORT']
+
+    print(f"URL: http://{HOST}:{PORT}")
+    print(f"CORS: http://{HOST}:{PORT}")
     
     app.run(host=app.config['HOST'], port=int(app.config['PORT']))
