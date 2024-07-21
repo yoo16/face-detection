@@ -4,10 +4,6 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { useState } from 'react';
 
 const RegisterPage = () => {
-    const { data: session } = useSession();
-    const [message, setMessage] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
     return (
         <div className="my-4">
             <div className="text-center">

@@ -73,12 +73,13 @@ def register_face(user_id, image_data, timestamp):
 
     face_path = os.path.join(user_dir, f'{timestamp}.jpg')
     cv2.imwrite(face_path, face_img)
+    result['message'] = "Registed face success."
     result["user_id"] = user_id
     return result
 
 
 def recognize_face(image_data):
-    result = get_initial_result()  # 新しい result を作成
+    result = get_initial_result()
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:

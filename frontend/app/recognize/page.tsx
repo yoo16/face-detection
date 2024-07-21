@@ -2,57 +2,35 @@
 
 import { useState, useRef } from 'react';
 import axios from 'axios';
+import useCamera from '@/app/hooks/useCamera';
+import { signIn } from 'next-auth/react';
 
 const RecognizePage = () => {
-    const [detectedImage, setDetectedImage] = useState<string | null>(null);
-    const [cameraActive, setCameraActive] = useState<boolean>(false);
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    const { videoRef, canvasRef, cameraActive, startCamera, stopCamera, getBlob } = useCamera();
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const streamRef = useRef<MediaStream | null>(null);
-
-    const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-    const startCamera = async () => {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-            }
-            streamRef.current = stream;
-            setCameraActive(true);
-        }
-    };
-
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            if (videoRef.current) {
-                videoRef.current.pause();
-                videoRef.current.srcObject = null;
-            }
-            streamRef.current = null;
-            setCameraActive(false);
-        }
-    };
-
-    const getDetectBlob = async () => {
-        const blob = await (await fetch(`data:image/jpeg;base64,${detectedImage}`)).blob();
-        return blob;
-    }
-
     const recognizeFace = async () => {
         try {
-            const blob = await getDetectBlob();
+            const blob = await getBlob();
             if (!blob) return;
             const formData = new FormData();
             formData.append('image', blob, 'webcam.jpg');
-            const response = await axios.post(`${API_URL}/recognize`, formData);
+            const response = await axios.post(`${API_URL}api/face/recognize`, formData);
             setError(response.data.error);
             setMessage(response.data.message);
+            console.log("user_id:", response.data.user_id)
+            const user_id = response.data.user_id;
+            if (user_id > 0) {
+                signIn('credentials', {
+                    callbackUrl: '/register',
+                    userId: user_id,
+                });
+            } else {
+                setError('Face recognition failed');
+            }
         } catch (error) {
             setError('Recognition error.');
         }
@@ -98,17 +76,14 @@ const RecognizePage = () => {
                 </div>
 
                 <div>
-                    {detectedImage && (
-                        <div className="mt-4">
-                            <button
-                                onClick={recognizeFace}
-                                className="bg-purple-500 text-white py-2 px-4 rounded mb-2"
-                            >
-                                Recognize Face
-                            </button>
-                            <img src={`data:image/jpeg;base64,${detectedImage}`} alt="Detected Faces" className="border-2 border-gray-300" />
-                        </div>
-                    )}
+                    <div className="mt-4">
+                        <button
+                            onClick={recognizeFace}
+                            className="bg-purple-500 text-white py-2 px-4 rounded mb-2"
+                        >
+                            Recognize Face
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

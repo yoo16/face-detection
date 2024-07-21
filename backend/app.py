@@ -14,6 +14,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
 
+
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'message': "hello flask"})
@@ -39,45 +40,38 @@ def detect():
 @app.route('/api/face/regist', methods=['POST'])
 def register():
     if 'user_id' not in request.form:
-        return jsonify({'error': 'No user_id part in the request'}), 400
+        return jsonify({'error': 'No user_id part in the request'})
 
     if 'image' not in request.files:
-        return jsonify({'error': 'No image part in the request'}), 400
+        return jsonify({'error': 'No image part in the request'})
 
     user_id = request.form['user_id']
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'No image selected for uploading'}), 400
+        return jsonify({'error': 'No image selected for uploading'})
 
     img = file.read()
 
     print(f"Received image for user ID: {user_id}")
-    print(f"Image size: {len(img)} bytes")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    if register_face(user_id, img, timestamp):
-        return jsonify({'status': 'success'})
-    else:
-        return jsonify({'status': 'failure'})
-
+    result = register_face(user_id, img, timestamp)
+    print(f"{result}")
+    return jsonify(result)
 
 @app.route('/api/face/recognize', methods=['POST'])
 def recognize():
     if 'image' not in request.files:
-        return jsonify({'error': 'No image part in the request'}), 400
+        return jsonify({'error': 'No image part in the request'})
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'No image selected for uploading'}), 400
+        return jsonify({'error': 'No image selected for uploading'})
     img = file.read()
 
-    print("Received image for recognition")
-
     result = recognize_face(img)
+    print(f"{result}")
+    return jsonify(result)
 
-    if result.user_id > 0:
-        return jsonify({'status': 'success', 'user_id': result.user_id})
-    else:
-        return jsonify({'status': 'failure', 'error': result.error})
 
 if __name__ == '__main__':
     if not os.path.exists('static/registered_faces'):
@@ -88,5 +82,5 @@ if __name__ == '__main__':
 
     print(f"URL: http://{HOST}:{PORT}")
     print(f"CORS: http://{HOST}:{PORT}")
-    
+
     app.run(host=app.config['HOST'], port=int(app.config['PORT']))

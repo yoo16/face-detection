@@ -16,15 +16,30 @@ export const authOptions: NextAuthOptions = {
         signIn: '/auth/login',
         error: '/auth/login',
     },
+    secret: process.env.SECRET,
     session: { strategy: "jwt" },
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!
         }),
+        CredentialsProvider({
+            name: 'Credentials',
+            credentials: {
+                userId: { label: "UserId", type: "text" },
+            },
+            async authorize(credentials, req) {
+                if (credentials && credentials.userId) {
+                    const user = await prisma.user.findUnique({
+                        where: { id: parseInt(credentials.userId, 10) },
+                    });
+                    return user;
+                }
+            }
+        })
     ],
     callbacks: {
-        async signIn({ user, account, profile }) {
+        async signIn({ user, account, profile, email, credentials }) {
             if (!user || !user.email) return false;
             if (!account) return false;
 
@@ -40,7 +55,10 @@ export const authOptions: NextAuthOptions = {
             return true;
         },
         async redirect({ url, baseUrl }) {
-            return baseUrl
+            // if (url === '/auth/login') {
+            //     return `${baseUrl}/register`;
+            // }
+            return baseUrl;
         },
         async jwt({ token, user }) {
             // console.log("jwt:", token, user)
