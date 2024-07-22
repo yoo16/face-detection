@@ -54,8 +54,6 @@ def register():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S%f")
     result = register_face(user_id, image, timestamp)
 
-    print(f"Processed image {result}")
-
     return jsonify(result)
 
 

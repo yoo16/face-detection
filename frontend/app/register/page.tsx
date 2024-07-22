@@ -13,6 +13,7 @@ const RegisterPage = () => {
     const { data: session } = useSession();
     const [user, setUser] = useState<User>();
     const [message, setMessage] = useState<string | null>(null);
+    const [image, setImage] = useState(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -38,35 +39,49 @@ const RegisterPage = () => {
     }, [session]);
 
 
-    const registerFace = async (formData: FormData) => {
-        if (!formData) return;
-        console.log(formData)
+    const registerFace = async () => {
+        if (!session?.user) return;
+        const userId = session.user.id as string;
+
+        const blob = await getBlob();
+        if (!blob) return;
+
+        const formData = new FormData();
+        formData.append('image', blob, `webcam.jpg`);
+        formData.append('user_id', userId);
+        console.log("userID:", userId)
         try {
             var response = await axios.post(`${API_URL}api/face/regist`, formData);
+            console.log(response.data)
             setError(response.data.error)
-            setMessage(response.data.message)
+            setImage(response.data.image)
+            return response.data.status
         } catch (error) {
 
         }
     }
 
-    const registerFaces = async (times: number) => {
+    const registerFaces = async () => {
         if (!session?.user) return;
         setLoading(true);
-        const userId = session.user.id as string;
 
-        for (let i = 0; i < times; i++) {
-            const blob = await getBlob();
-            if (blob) {
-                const formData = new FormData();
-                formData.append('image', blob, `webcam.jpg`);
-                formData.append('user_id', userId);
-                await registerFace(formData);
-                
-                await new Promise((resolve) => setTimeout(resolve, 500));
+        var count = 0;
+        const MAX = 10;
+        var index = 0;
+        while (count < 10) {
+            const status = await registerFace();
+            if (status) {
+                count++
+                const message = `regist face count: ${count}`
+                setMessage(message)
             }
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            index++
+            if (index > MAX) break;
         }
         setLoading(false);
+        setError("")
+        setMessage("regist face completed.")
     };
 
     return (
@@ -104,7 +119,7 @@ const RegisterPage = () => {
                     {cameraActive &&
                         <div>
                             <button
-                                onClick={() => registerFaces(10)}
+                                onClick={() => registerFaces()}
                                 className="bg-blue-500 text-white py-2 px-4 rounded mb-2"
                             >
                                 Register Face
