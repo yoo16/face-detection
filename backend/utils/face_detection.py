@@ -5,7 +5,6 @@ import os
 FACE_IMAGE_DIR = "static/registered_faces"
 MAX_PROB_VALUE = 0.6
 
-# result の初期化は関数内で行う
 def get_initial_result():
     return {
         "user_id": 0,

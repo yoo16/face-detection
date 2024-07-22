@@ -3,7 +3,8 @@
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import useCamera from '@/app/hooks/useCamera';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import LoadingModal from '@/app/components/LoadingModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -13,34 +14,35 @@ const RegisterPage = () => {
     const [user, setUser] = useState<User>();
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     useEffect(() => {
+        const initializeCamera = async () => {
+            await startCamera();
+        };
+        initializeCamera();
+    }, [startCamera]);
+
+    useEffect(() => {
+        if (!session?.user) return;
         const fetchUser = async () => {
-            if (session?.user?.id) {
-                try {
-                    const userId = session.user.id;
-                    const response = await axios.get(`/api/user/${userId}`);
-                    console.log(response.data);
-                    setUser(response.data);
-                } catch (error) {
-                    console.error('Error fetching user:', error);
-                }
+            try {
+                const userId = session?.user?.id;
+                const response = await axios.get(`/api/user/${userId}`);
+                setUser(response.data);
+            } catch (error) {
+                setError('Error fetching user');
             }
         };
-
         fetchUser();
     }, [session]);
 
-    const registerFace = async () => {
-        if (!session?.user) return
+
+    const registerFace = async (formData: FormData) => {
+        if (!formData) return;
+        console.log(formData)
         try {
-            const blob = await getBlob();
-            if (!blob) return;
-            const formData = new FormData();
-            formData.append('image', blob, 'webcam.jpg');
-            formData.append('user_id', session.user.id as string);
             var response = await axios.post(`${API_URL}api/face/regist`, formData);
-            // console.log(response)
             setError(response.data.error)
             setMessage(response.data.message)
         } catch (error) {
@@ -48,8 +50,29 @@ const RegisterPage = () => {
         }
     }
 
+    const registerFaces = async (times: number) => {
+        if (!session?.user) return;
+        setLoading(true);
+        const userId = session.user.id as string;
+
+        for (let i = 0; i < times; i++) {
+            const blob = await getBlob();
+            if (blob) {
+                const formData = new FormData();
+                formData.append('image', blob, `webcam.jpg`);
+                formData.append('user_id', userId);
+                await registerFace(formData);
+                
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+            <LoadingModal show={loading} />
+
             <h1 className="text-3xl font-bold mb-4">Register</h1>
             <div>
                 <div>{user?.id}</div>
@@ -81,14 +104,7 @@ const RegisterPage = () => {
                     {cameraActive &&
                         <div>
                             <button
-                                onClick={stopCamera}
-                                className="bg-red-500 text-white py-2 px-4 me-4 rounded"
-                                disabled={!cameraActive}
-                            >
-                                Stop Camera
-                            </button>
-                            <button
-                                onClick={registerFace}
+                                onClick={() => registerFaces(10)}
                                 className="bg-blue-500 text-white py-2 px-4 rounded mb-2"
                             >
                                 Register Face

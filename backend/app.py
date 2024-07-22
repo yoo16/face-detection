@@ -14,6 +14,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
 
+FACE_IMAGE_DIR = os.path.join(os.getcwd(), 'static', 'registered_faces')
+
 
 @app.route('/', methods=['GET'])
 def index():
@@ -43,34 +45,44 @@ def register():
         return jsonify({'error': 'No user_id part in the request'})
 
     if 'image' not in request.files:
-        return jsonify({'error': 'No image part in the request'})
+        return jsonify({'error': 'No images part in the request'})
 
     user_id = request.form['user_id']
     file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No image selected for uploading'})
 
-    img = file.read()
+    image = file.read()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S%f")
+    result = register_face(user_id, image, timestamp)
 
-    print(f"Received image for user ID: {user_id}")
+    print(f"Processed image {result}")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    result = register_face(user_id, img, timestamp)
-    print(f"{result}")
     return jsonify(result)
+
 
 @app.route('/api/face/recognize', methods=['POST'])
 def recognize():
     if 'image' not in request.files:
         return jsonify({'error': 'No image part in the request'})
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No image selected for uploading'})
-    img = file.read()
 
-    result = recognize_face(img)
+    file = request.files['image']
+    image = file.read()
+
+    print(f"{file.filename}")
+
+    result = recognize_face(image)
     print(f"{result}")
     return jsonify(result)
+
+
+@app.route('/api/user/<int:user_id>/images', methods=['GET'])
+def get_registered_images(user_id):
+    user_dir = os.path.join(FACE_IMAGE_DIR, str(user_id))
+    if not os.path.exists(user_dir):
+        return jsonify({"images": []}), 200
+
+    images = [os.path.join('/static/registered_faces', str(user_id), file)
+        for file in os.listdir(user_dir)]
+    return jsonify({"images": images}), 200
 
 
 if __name__ == '__main__':
