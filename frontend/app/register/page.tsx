@@ -61,12 +61,26 @@ const RegisterPage = () => {
         }
     }
 
+    const checkMaxImages = async () => {
+        const MAX = 100;
+        const userId = session?.user?.id as string;
+        var response = await axios.get(`${API_URL}api/user/${userId}/images_count`);
+        var images_count = response.data.count
+        return (images_count > MAX);
+    }
+
     const registerFaces = async () => {
         if (!session?.user) return;
+        const isMaxImages = await checkMaxImages();
+        if (isMaxImages) {
+            setError('Max registered images.')
+            return;
+        }
+
         setLoading(true);
 
+        const MAX = 100;
         var count = 0;
-        const MAX = 10;
         var index = 0;
         while (count < 10) {
             const status = await registerFace();

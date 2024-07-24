@@ -4,6 +4,7 @@ import os
 
 FACE_IMAGE_DIR = "static/registered_faces"
 MAX_PROB_VALUE = 0.6
+MAX_IMAGES_COUNT = 100
 
 def get_initial_result():
     return {
@@ -12,6 +13,14 @@ def get_initial_result():
         "message": "",
         "image": None,
     }
+
+def images_count(user_id):
+    file_count = 0
+    user_dir = os.path.join(FACE_IMAGE_DIR, str(user_id))
+    if os.path.exists(user_dir):
+        files = os.listdir(user_dir)
+        file_count = len(files)
+    return file_count
 
 def detect_faces(image_data):
     result = get_initial_result()
@@ -43,6 +52,12 @@ def detect_faces(image_data):
 
 def register_face(user_id, image_data, timestamp):
     result = get_initial_result()
+
+    count = images_count(user_id)
+    if (count) > MAX_IMAGES_COUNT:
+        result["error"] = "Faild regist. max image's count"
+        return result
+    
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
