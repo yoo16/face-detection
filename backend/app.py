@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from utils.face_detection import detect_faces, register_face, recognize_face, images_count
+from utils.face_detection import *
 import cv2
 import base64
 import os
@@ -20,7 +20,6 @@ FACE_IMAGE_DIR = os.path.join(os.getcwd(), 'static', 'registered_faces')
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'message': "hello flask"})
-
 
 @app.route('/api/face/detect', methods=['POST'])
 def detect():
@@ -77,6 +76,11 @@ def get_images_count(user_id):
     file_count = images_count(user_id)
     return jsonify({"count": file_count}), 200
 
+@app.route('/api/user/<int:user_id>/delete_images', methods=['POST'])
+def delete_images(user_id):
+    result = delete_user_images(user_id)
+    return jsonify(result), 200
+
 if __name__ == '__main__':
     if not os.path.exists('static/registered_faces'):
         os.makedirs('static/registered_faces')
@@ -88,3 +92,4 @@ if __name__ == '__main__':
     print(f"CORS: http://{HOST}:{PORT}")
 
     app.run(host=app.config['HOST'], port=int(app.config['PORT']))
+

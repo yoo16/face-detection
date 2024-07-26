@@ -1,10 +1,12 @@
 import cv2
 import numpy as np
 import os
+import base64
 
 FACE_IMAGE_DIR = "static/registered_faces"
 MAX_PROB_VALUE = 0.6
 MAX_IMAGES_COUNT = 100
+
 
 def get_initial_result():
     return {
@@ -14,6 +16,7 @@ def get_initial_result():
         "image": None,
     }
 
+
 def images_count(user_id):
     file_count = 0
     user_dir = os.path.join(FACE_IMAGE_DIR, str(user_id))
@@ -21,6 +24,18 @@ def images_count(user_id):
         files = os.listdir(user_dir)
         file_count = len(files)
     return file_count
+
+def delete_user_images(user_id):
+    user_dir = os.path.join(FACE_IMAGE_DIR, str(user_id))
+    for filename in os.listdir(user_dir):
+        file_path = os.path.join(user_dir, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                os.rmdir(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
 
 def detect_faces(image_data):
     result = get_initial_result()
@@ -50,14 +65,16 @@ def detect_faces(image_data):
     result['image'] = img
     return result
 
+
 def register_face(user_id, image_data, timestamp):
     result = get_initial_result()
 
     count = images_count(user_id)
     if (count) > MAX_IMAGES_COUNT:
+        result["images_count"] = count
         result["error"] = "Faild regist. max image's count"
         return result
-    
+
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -87,9 +104,16 @@ def register_face(user_id, image_data, timestamp):
 
     face_path = os.path.join(user_dir, f'{timestamp}.jpg')
     cv2.imwrite(face_path, face_img)
+
     result['status'] = True
     result['message'] = "Registed face success."
     result["user_id"] = user_id
+    result["images_count"] = images_count(user_id)
+
+    # _, buffer = cv2.imencode('.jpg', face_img)
+    # face_base64 = base64.b64encode(buffer).decode('utf-8')
+    # result["image"] = face_base64
+
     return result
 
 
