@@ -59,15 +59,16 @@ const RegisterPage = () => {
                         <div className="text-center">
                             <button
                                 onClick={authorize}
-                                className={`py-2 px-4 rounded mb-2 ${faceDetected ? 'bg-green-500 text-white' : 'bg-gray-500 text-gray-300'
-                                    }`}
+                                className={`py-2 px-4 rounded mb-2 ${
+                                    faceDetected ? 'bg-green-500 text-white' : 'bg-gray-500 text-gray-300'
+                                }`}
                                 disabled={!faceDetected}
                             >
                                 Authorize Face
                             </button>
                         </div>
-                        <video ref={videoRef} width="640" height="480" className="mb-4 border-2 border-gray-300" />
-                        <canvas ref={canvasRef} width="640" height="480" className="hidden" />
+                        <canvas ref={canvasRef} width="640" height="480" className=" mb-4 border-2 border-gray-300" />
+                        <video ref={videoRef} width="640" height="480" className="hidden" />
                     </>
                 )}
             </div>

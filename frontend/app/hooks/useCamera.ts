@@ -14,7 +14,7 @@ const useCamera = () => {
                 videoRef.current.srcObject = stream;
                 videoRef.current.onloadedmetadata = () => {
                     videoRef.current?.play();
-                    startFaceDetection();
+                    detectFaces(); // Start detecting faces
                 };
             }
             setCameraActive(true);
@@ -28,7 +28,6 @@ const useCamera = () => {
             videoRef.current.srcObject = null;
         }
         setCameraActive(false);
-        setFaceDetected(false);
     }, []);
 
     const captureImage = useCallback(() => {
@@ -42,23 +41,45 @@ const useCamera = () => {
         return null;
     }, []);
 
-    const startFaceDetection = useCallback(async () => {
-        if (!videoRef.current) return;
+    const getBlob = useCallback(async (): Promise<Blob | null> => {
+        if (canvasRef.current && videoRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            if (context) {
+                context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                const blob = await new Promise<Blob | null>(resolve => canvasRef.current?.toBlob(resolve, 'image/jpeg'));
+                return blob;
+            }
+        }
+        return null;
+    }, []);
+
+    const detectFaces = useCallback(async () => {
+        if (!videoRef.current || !canvasRef.current) return;
 
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
         await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
 
-        const detectFaces = async () => {
-            if (!videoRef.current) return;
-            const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-            setFaceDetected(detections.length > 0);
-            requestAnimationFrame(detectFaces);
+        const context = canvasRef.current.getContext('2d');
+
+        const detect = async () => {
+            if (context && videoRef.current) {
+                const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+                if (detections && canvasRef?.current) {
+                    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                    context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                    faceapi.draw.drawDetections(canvasRef.current, detections);
+                    // faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
+                    setFaceDetected(detections.length > 0);
+                }
+            }
+            requestAnimationFrame(detect);
         };
 
-        detectFaces();
+        detect();
     }, []);
 
-    return { videoRef, canvasRef, cameraActive, startCamera, stopCamera, captureImage, faceDetected };
+    return { videoRef, canvasRef, cameraActive, startCamera, stopCamera, captureImage, getBlob, faceDetected };
 };
 
 export default useCamera;
