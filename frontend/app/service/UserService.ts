@@ -1,8 +1,41 @@
 import { PrismaClient } from '@prisma/client';
 import { User } from 'next-auth';
-import { AdapterUser } from 'next-auth/adapters';
 
 const prisma = new PrismaClient();
+
+export const userList = async () => {
+    const users = await prisma.user.findMany();
+    return users;
+}
+
+export const userIdList = async () => {
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+            }
+        });
+        if (!users) return [];
+        const userIds = users.map(user => user.id);
+        return userIds;
+    } catch (error) {
+        return [];
+    }
+}
+
+export const findUser = async (userId: number) => {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+    });
+    return user;
+}
+
+export const findUserByEmail = async (email: string) => {
+    const user = await prisma.user.findUnique({
+        where: { email: email },
+    });
+    return user;
+}
 
 export const createUser = async (user: User, account: Account) => {
     if (!user.email) return;
@@ -27,6 +60,6 @@ export const createUser = async (user: User, account: Account) => {
         });
         return newUser;
     } catch (error) {
-        
+
     }
 };

@@ -110,6 +110,7 @@ const RegisterPage = () => {
     };
 
     useEffect(() => {
+        console.log("Session:", session)
         if (!session?.user) return;
         fetchUser();
         checkMaxImages();

@@ -27,6 +27,17 @@ const useCamera = () => {
         setCameraActive(false);
     }, []);
 
+    const captureImage = useCallback(() => {
+        if (canvasRef.current && videoRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            if (context) {
+                context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                return canvasRef.current.toDataURL('image/jpeg');
+            }
+        }
+        return null;
+    }, []);
+
     const getBlob = useCallback(async (): Promise<Blob | null> => {
         if (canvasRef.current && videoRef.current) {
             const context = canvasRef.current.getContext('2d');
@@ -39,7 +50,7 @@ const useCamera = () => {
         return null;
     }, []);
 
-    return { videoRef, canvasRef, cameraActive, startCamera, stopCamera, getBlob };
+    return { videoRef, canvasRef, cameraActive, startCamera, stopCamera, captureImage, getBlob };
 };
 
 export default useCamera;

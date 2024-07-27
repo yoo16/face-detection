@@ -2,13 +2,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import prisma from '@/app/lib/prisma';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
-import AppleProvider from "next-auth/providers/apple";
-import FacebookProvider from "next-auth/providers/facebook";
-import { cookies } from "next/headers";
-
-import { Session } from "next-auth";
-import { createUser } from "@/app/service/createUser";
+import { createUser, findUser, findUserByEmail } from "@/app/service/UserService";
 
 export const authOptions: NextAuthOptions = {
     debug: false,
@@ -26,28 +20,36 @@ export const authOptions: NextAuthOptions = {
         CredentialsProvider({
             name: 'Credentials',
             credentials: {
-                userId: { label: "UserId", type: "text" },
+                userId: { label: 'UserId', type: 'text' },
             },
             async authorize(credentials, req) {
                 if (credentials && credentials.userId) {
-                    const user = await prisma.user.findUnique({
-                        where: { id: parseInt(credentials.userId, 10) },
-                    });
-                    return user;
+                    const user = await findUser(parseInt(credentials.userId, 10));
+                    if (user) {
+                        const authUser = {
+                            id: user.id.toString(),
+                            name: user.name,
+                            email: user.email,
+                        }
+                        return authUser;
+                    }
                 }
-            }
-        })
+                return null;
+            },
+        }),
     ],
     callbacks: {
-        async signIn({ user, account, profile, email, credentials }) {
-            if (!user || !user.email) return false;
+        async signIn({ user, account }) {
+            if (!user.email) return false;
             if (!account) return false;
 
-            const existingUser = await prisma.user.findUnique({
-                where: { email: user.email },
-            });
-            if (existingUser) {
-                user.id = existingUser.id as unknown as string;
+            console.log("User:", user)
+            console.log("Account:", account)
+
+            const existsUser = await findUserByEmail(user.email)
+            console.log(existsUser)
+            if (existsUser) {
+                user.id = existsUser.id as unknown as string;
             } else {
                 const newUser = await createUser(user, account);
                 user.id = newUser?.id as unknown as string;
@@ -61,7 +63,6 @@ export const authOptions: NextAuthOptions = {
             return baseUrl;
         },
         async jwt({ token, user }) {
-            // console.log("jwt:", token, user)
             if (user) {
                 token.id = user.id;
             }
@@ -71,7 +72,6 @@ export const authOptions: NextAuthOptions = {
             if (session.user) {
                 session.user.id = token.id as string;
             }
-            // console.log("session user:", session)
             return session;
         },
     }
