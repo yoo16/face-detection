@@ -51,14 +51,19 @@ const useCamera = () => {
             }
         }
         return null;
+        // const imageDataUrl = captureImage();
+        // if (!imageDataUrl) return;
+        // const blob = await fetch(imageDataUrl).then(res => res.blob());
+        // return blob;
     }, []);
 
     const detectFaces = useCallback(async () => {
         if (!videoRef.current || !canvasRef.current) return;
 
-        await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-        await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+        const MODEL_URL = '/models';
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
         const context = canvasRef.current.getContext('2d');
 

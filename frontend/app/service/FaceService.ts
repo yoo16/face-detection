@@ -1,26 +1,23 @@
 import * as faceapi from 'face-api.js';
-import { promises as fs } from 'fs';
-import path from 'path';
 
-// モデルの読み込み関数
 export async function loadModels() {
-    await faceapi.nets.ssdMobilenetv1.loadFromDisk('./models');
-    await faceapi.nets.faceLandmark68Net.loadFromDisk('./models');
-    await faceapi.nets.faceRecognitionNet.loadFromDisk('./models');
+    await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+    await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
 }
 
-// 特定のユーザーIDの画像からラベル付き顔データを読み込む関数
 export const loadLabeledImages = async (userId: number) => {
     const descriptions: Float32Array[] = [];
-    const basePath = path.join(process.cwd(), 'public', 'registered_faces', userId.toString());
+    const basePath = `/registered_faces/${userId}`;
 
     try {
-        const files = await fs.readdir(basePath);
+        const response = await fetch(basePath);
+        const files = await response.json();
+
         for (const file of files) {
-            const imagePath = path.join(basePath, file);
+            const imagePath = `${basePath}/${file}`;
             try {
-                const imageData = await fs.readFile(imagePath) as unknown as Blob;
-                const img = await faceapi.bufferToImage(imageData);
+                const img = await faceapi.fetchImage(imagePath);
                 const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
                 if (detections) {
                     descriptions.push(detections.descriptor);
@@ -36,18 +33,10 @@ export const loadLabeledImages = async (userId: number) => {
     return new faceapi.LabeledFaceDescriptors(userId.toString(), descriptions);
 };
 
-// 画像を受け取り、認証処理を行う関数
-export const recognizeFace = async (formData: FormData, userIds: number[]) => {
-    const imageFile = formData.get('image') as File;
-    if (!imageFile) {
-        throw new Error('No image file provided');
-    }
-
-    const imageArrayBuffer = await imageFile.arrayBuffer();
-    const imageBuffer = Buffer.from(imageArrayBuffer) as unknown as Blob;
+export const recognizeFace = async (imageBuffer: Blob, userIds: number[]) => {
     const img = await faceapi.bufferToImage(imageBuffer);
-
     const queryDetections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+
     if (!queryDetections) {
         throw new Error('No face detected in the provided image');
     }
@@ -56,9 +45,9 @@ export const recognizeFace = async (formData: FormData, userIds: number[]) => {
     let bestDistance = Infinity;
 
     for (const userId of userIds) {
+        console.log("User ID:", userId)
         const labeledDescriptors = await loadLabeledImages(userId);
         const faceMatcher = new faceapi.FaceMatcher([labeledDescriptors]);
-
         const match = faceMatcher.findBestMatch(queryDetections.descriptor);
         if (match.distance < bestDistance) {
             bestDistance = match.distance;
@@ -66,9 +55,5 @@ export const recognizeFace = async (formData: FormData, userIds: number[]) => {
         }
     }
 
-    if (bestMatch) {
-        return bestMatch;
-    } else {
-        throw new Error('No matching face found');
-    }
+    return bestMatch;
 };
