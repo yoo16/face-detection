@@ -37,12 +37,10 @@ export const recognizeFace = async (imageBuffer: Blob, userIds: number[]) => {
     const img = await faceapi.bufferToImage(imageBuffer);
     const queryDetections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
 
-    if (!queryDetections) {
-        throw new Error('No face detected in the provided image');
-    }
+    if (!queryDetections) return;
 
-    let bestMatch = null;
-    let bestDistance = Infinity;
+    var bestMatch = null;
+    var bestDistance = Infinity;
 
     for (const userId of userIds) {
         console.log("User ID:", userId)
