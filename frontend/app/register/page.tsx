@@ -10,7 +10,7 @@ import Image from 'next/image';
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const RegisterPage = () => {
-    const { videoRef, canvasRef, cameraActive, startCamera, stopCamera, getBlob } = useCamera();
+    const { videoRef, canvasRef, cameraActive, startCamera, stopCamera, captureImage, faceDetected, getBlob } = useCamera();
     const { data: session } = useSession();
     const [user, setUser] = useState<User>();
     const [message, setMessage] = useState<string | null>(null);
@@ -20,18 +20,6 @@ const RegisterPage = () => {
     const [imagesCount, setImagesCount] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-
-    const checkMaxImages = useCallback(async () => {
-        const MAX = 100;
-        const userId = session?.user?.id as string;
-        const response = await axios.get(`${API_URL}api/user/${userId}/images_count`);
-        const images_count = response.data.count;
-        const isMaxImages = images_count >= MAX;
-
-        setImagesCount(images_count)
-        setIsMaxImages(isMaxImages);
-        if (isMaxImages) setError(`Max face images. (${images_count})`)
-    }, [session?.user?.id]);
 
     const fetchUser = useCallback(async () => {
         try {
@@ -43,25 +31,21 @@ const RegisterPage = () => {
         }
     }, [session?.user?.id]);
 
-    const deleteImages = async () => {
-        const userId = session?.user?.id as string;
-        const confirmed = window.confirm('Are you sure you want to delete all images?');
-        if (confirmed) {
-            try {
-                const uri = `${API_URL}api/user/${userId}/delete_images`;
-                console.log(uri)
-                const response = await axios.post(uri);
-            } catch (error) {
-                console.error('Error deleting images:', error);
-            }
-        }
+    const deleteFaces = async () => {
+        if (!session?.user) return;
+        const userId = session.user.id as string;
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        try {
+            const uri =`${API_URL}api/face/deletes`
+            var response = await axios.post(uri, formData);
+            return response.data.status
+        } catch (error) {
+
+        } 
     }
 
-    const registerFace = async () => {
-        if (isMaxImages) {
-            return;
-        }
-
+    const registFace = async () => {
         if (!session?.user) return;
         const userId = session.user.id as string;
 
@@ -69,10 +53,13 @@ const RegisterPage = () => {
         if (!blob) return;
 
         const formData = new FormData();
-        formData.append('image', blob, `webcam.jpg`);
+        formData.append('image', blob, "webcam.jpg");
         formData.append('user_id', userId);
+        // console.log(formData)
+
         try {
-            var response = await axios.post(`${API_URL}api/face/regist`, formData);
+            const uri =`${API_URL}api/face/regist`
+            var response = await axios.post(uri, formData);
             setImagesCount(response.data.images_count)
             setImageUrl(URL.createObjectURL(blob));
             setError(response.data.error)
@@ -82,25 +69,29 @@ const RegisterPage = () => {
         }
     }
 
-
-    const registerFaces = async () => {
+    const registFaces = async () => {
         if (!session?.user) return;
-        if (isMaxImages) return;
-
         setLoading(true);
 
-        const MAX = 100;
+        await deleteFaces();
+
+        setLoading(false);
+
+        const MAX = 10;
         var count = 0;
         var index = 0;
-        while (count < 10) {
-            const status = await registerFace();
+        
+        while (count < 5) {
+            const status = await registFace();
+            var message = ""
             if (status) {
                 count++
-                const message = `regist face count: ${count}`
-                setMessage(message)
+                message = `regist face count: ${count}`
+            } else {
+                message = `regist face error: ${index}`
             }
-            if (imagesCount > MAX) break;
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            setMessage(message)
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             index++
             if (index > MAX) break;
         }
@@ -110,13 +101,6 @@ const RegisterPage = () => {
     };
 
     useEffect(() => {
-        console.log("Session:", session)
-        if (!session?.user) return;
-        fetchUser();
-        checkMaxImages();
-    }, [session, fetchUser, checkMaxImages])
-
-    useEffect(() => {
         const initializeCamera = async () => {
             await startCamera();
         };
@@ -124,7 +108,7 @@ const RegisterPage = () => {
     }, [startCamera]);
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+        <div className="bg-gray-100 flex flex-col items-center justify-center">
             <LoadingModal show={loading} />
 
             <h1 className="text-3xl font-bold mb-4">Register</h1>
@@ -148,17 +132,18 @@ const RegisterPage = () => {
 
                     {cameraActive &&
                         <>
-                            <div>
+                            <video ref={videoRef} width="320" height="240" className="mb-4 border-2 border-gray-300" />
+                            <div className="text-center">
                                 {isMaxImages ? (
                                     <button
-                                        onClick={() => deleteImages()}
+                                        onClick={() => deleteFaces()}
                                         className="bg-red-500 text-white py-2 px-4 rounded mb-2"
                                     >
                                         Delete Face
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => registerFaces()}
+                                        onClick={() => registFaces()}
                                         className="bg-blue-500 text-white py-2 px-4 rounded mb-2"
                                         disabled={isMaxImages}
                                     >
@@ -166,12 +151,11 @@ const RegisterPage = () => {
                                     </button>
                                 )}
                             </div>
-                            <video ref={videoRef} width="640" height="480" className="mb-4 border-2 border-gray-300" />
                         </>
                     }
 
                     {imageUrl && (
-                        <Image src={imageUrl} alt="Registered Face" width={640} height={480} className="mb-4 border-2 border-gray-300" />
+                        <Image src={imageUrl} alt="Registered Face" width={320} height={240} className="mb-4 border-2 border-gray-300" />
                     )}
 
                 </div>

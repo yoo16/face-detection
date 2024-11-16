@@ -35,13 +35,14 @@ const RegisterPage = () => {
 
         try {
             setLoading(true);
-            const response = await axios.post(`api/face/recognize`, formData);
+            const uri = `${API_URL}api/face/recognize`;
+            const response = await axios.post(uri, formData);
             const userId = response.data.user_id;
             console.log(response)
             if (userId > 0) {
                 setMessage(`verify: ${userId}`);
             } else {
-                setError(response.data.error);
+                setError(`not verify`);
             }
         } catch (error) {
             setError('Error verifying image');
@@ -51,25 +52,23 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+        <div className="bg-gray-100 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold mb-4">Face Authorization</h1>
             {message && <div className="my-1 p-4 bg-green-200 text-green-800 rounded">{message}</div>}
             {error && <div className="my-1 p-4 bg-red-200 text-red-800 rounded">{error}</div>}
             <div className="mb-4">
                 {cameraActive ? (
                     <>
+                        <canvas ref={canvasRef} width="320" height="240" className="hidden" />
+                        <video ref={videoRef} width="320" height="240" className="mb-4 border-2 border-gray-300" />
                         <div className="text-center">
                             <button
                                 onClick={authorize}
-                                className={`py-2 px-4 rounded mb-2 ${faceDetected ? 'bg-green-500 text-white' : 'bg-gray-500 text-gray-300'
-                                    }`}
-                                disabled={!faceDetected}
+                                className={`py-2 px-4 rounded mb-2 bg-green-500 text-white`}
                             >
                                 Authorize Face
                             </button>
                         </div>
-                        <canvas ref={canvasRef} width="640" height="480" className=" mb-4 border-2 border-gray-300" />
-                        <video ref={videoRef} width="640" height="480" className="hidden" />
                     </>
                 ) : (
                     <>

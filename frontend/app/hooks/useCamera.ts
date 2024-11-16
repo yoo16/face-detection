@@ -14,7 +14,7 @@ const useCamera = () => {
                 videoRef.current.srcObject = stream;
                 videoRef.current.onloadedmetadata = () => {
                     videoRef.current?.play();
-                    detectFaces(); // Start detecting faces
+                    // detectFaces(); // Start detecting faces
                 };
             }
             setCameraActive(true);
@@ -57,32 +57,32 @@ const useCamera = () => {
         // return blob;
     }, []);
 
-    const detectFaces = useCallback(async () => {
-        if (!videoRef.current || !canvasRef.current) return;
+    // const detectFaces = useCallback(async () => {
+    //     if (!videoRef.current || !canvasRef.current) return;
 
-        const MODEL_URL = '/models';
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    //     const MODEL_URL = '/models';
+    //     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    //     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    //     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
-        const context = canvasRef.current.getContext('2d');
+    //     const context = canvasRef.current.getContext('2d');
 
-        const detect = async () => {
-            if (context && videoRef.current) {
-                const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
-                if (detections && canvasRef?.current) {
-                    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-                    context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-                    faceapi.draw.drawDetections(canvasRef.current, detections);
-                    // faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
-                    setFaceDetected(detections.length > 0);
-                }
-            }
-            requestAnimationFrame(detect);
-        };
+    //     const detect = async () => {
+    //         if (context && videoRef.current) {
+    //             const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+    //             if (detections && canvasRef?.current) {
+    //                 context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    //                 context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+    //                 faceapi.draw.drawDetections(canvasRef.current, detections);
+    //                 // faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
+    //                 setFaceDetected(detections.length > 0);
+    //             }
+    //         }
+    //         requestAnimationFrame(detect);
+    //     };
 
-        detect();
-    }, []);
+    //     detect();
+    // }, []);
 
     return { videoRef, canvasRef, cameraActive, startCamera, stopCamera, captureImage, getBlob, faceDetected };
 };
